@@ -2,37 +2,47 @@ var dnode = require('dnode');
 var EventEmitter = require('events').EventEmitter;
 
 var upnode = module.exports = function (cons) {
-    return {
-        connect : function () {
-            var args = [].slice.call(arguments);
-            var up = createConnectionUp();
-            return connect.apply(null, [ up, cons ].concat(args));
-        },
-        listen : function () {
-            var args = [].slice.call(arguments);
-            var server = dnode(cons);
-            server.use(upnode.ping);
-            server.use(function (remote, conn) {
-                var iv = setInterval(function () {
-                    if (typeof remote.ping === 'function') {
-                        var to = setTimeout(function () {
-                            conn.end();
-                        }, 10 * 10000);
-                        
-                        remote.ping(function () {
-                            clearTimeout(to);
-                        });
-                    }
-                }, 10 * 1000);
-                
-                conn.once('end', function () {
-                    clearInterval(iv);
-                });
-            });
-            server.listen.apply(server, args);
-            return server;
-        },
+    var self = {};
+    self.connect = function () {
+        var args = [].slice.call(arguments);
+        var up = createConnectionUp();
+        return connect.apply(null, [ up, cons ].concat(args));
     };
+    
+    self.listen = function () {
+        var args = [].slice.call(arguments);
+        var server = dnode(cons);
+        server.use(upnode.ping);
+        server.use(function (remote, conn) {
+            var iv = setInterval(function () {
+                if (typeof remote.ping === 'function') {
+                    var to = setTimeout(function () {
+                        conn.end();
+                    }, 10 * 10000);
+                    
+                    remote.ping(function () {
+                        clearTimeout(to);
+                    });
+                }
+            }, 10 * 1000);
+            
+            conn.once('end', function () {
+                clearInterval(iv);
+            });
+        });
+        server.listen.apply(server, args);
+        
+        if (!self.close) {
+            self._servers = [];
+            self.close = function () {
+                self._servers.forEach(function (s) { s.close() });
+            };
+        }
+        self._servers.push(server);
+        return server;
+    };
+    
+    return self;
 };
 
 function createConnectionUp () {

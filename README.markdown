@@ -16,13 +16,11 @@ Write a dnode server as usual but enable the upnode ping middleware with
 server.js:
 
 ``` js
-var dnode = require('dnode');
 var upnode = require('upnode');
 
 var server = dnode(function (client, conn) {
     this.time = function (cb) { cb(new Date().toString()) };
 });
-server.use(upnode.ping);
 server.listen(7000);
 ```
 
@@ -97,10 +95,9 @@ Suppose we have a simple dnode server with a `beep` function protected behind an
 server.js:
 
 ``` js
-var dnode = require('dnode');
 var upnode = require('upnode');
 
-var server = dnode(function (client, conn) {
+var server = upnode(function (client, conn) {
     this.auth = function (user, pass, cb) {
         if (user === 'moo' && pass === 'hax') {
             cb(null, {
@@ -110,7 +107,6 @@ var server = dnode(function (client, conn) {
         else cb('ACCESS DENIED')
     };
 });
-server.use(upnode.ping);
 server.listen(7000);
 ```
 
