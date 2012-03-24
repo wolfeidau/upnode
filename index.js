@@ -78,7 +78,9 @@ function createConnectionUp () {
 }
 
 upnode.ping = function (client, conn) {
-    if (!this.ping) this.ping = function (cb) { cb() };
+    if (!this.ping) this.ping = function (cb) {
+        if (typeof cb === 'function') cb()
+    };
 };
 
 upnode.connect = function () {
@@ -159,10 +161,15 @@ function connect (up, cons) {
             }
         });
         
+        var res = cons || {};
         if (typeof cons === 'function') {
-            return cons.call(this, remote, conn);
+            res = cons.call(this, remote, conn);
         }
-        else return cons || {};
+        if (!res.ping) res.ping = function (cb) {
+            if (typeof cb === 'function') cb();
+        };
+        
+        return res;
     });
     
     var alive = true;

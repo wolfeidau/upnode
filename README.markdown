@@ -244,6 +244,12 @@ up.close()
 
 Close the connection and don't attempt to reconnect.
 
+upnode(cons).listen(...)
+------------------------
+
+Create and return a new dnode server with ping middleware loaded that pings the
+connected clients to ensure connectivity to all connected nodes.
+
 upnode.ping()
 -------------
 
