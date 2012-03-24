@@ -2,6 +2,40 @@ var dnode = require('dnode');
 var EventEmitter = require('events').EventEmitter;
 
 var upnode = module.exports = function (cons) {
+    return {
+        connect : function () {
+            var args = [].slice.call(arguments);
+            var up = createConnectionUp();
+            return connect.apply(null, [ up, cons ].concat(args));
+        },
+        listen : function () {
+            var args = [].slice.call(arguments);
+            var server = dnode(cons);
+            server.use(upnode.ping);
+            server.use(function (remote, conn) {
+                var iv = setInterval(function () {
+                    if (typeof remote.ping === 'function') {
+                        var to = setTimeout(function () {
+                            conn.end();
+                        }, 10 * 10000);
+                        
+                        remote.ping(function () {
+                            clearTimeout(to);
+                        });
+                    }
+                }, 10 * 1000);
+                
+                conn.once('end', function () {
+                    clearInterval(iv);
+                });
+            });
+            server.listen.apply(server, args);
+            return server;
+        },
+    };
+};
+
+function createConnectionUp () {
     var up = function (t, fn) {
         if (typeof t === 'function') {
             fn = t;
@@ -40,8 +74,8 @@ var upnode = module.exports = function (cons) {
         else up[name] = emitter[name];
     });
     
-    return { connect : connect.bind(null, up, cons) };
-};
+    return up;
+}
 
 upnode.ping = function (client, conn) {
     if (!this.ping) this.ping = function (cb) { cb() };
@@ -49,6 +83,10 @@ upnode.ping = function (client, conn) {
 
 upnode.connect = function () {
     return upnode({}).connect.apply(null, arguments);
+};
+
+upnode.listen = function () {
+    return upnode({}).listen.apply(null, arguments);
 };
 
 function connect (up, cons) {
