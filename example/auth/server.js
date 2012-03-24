@@ -1,7 +1,6 @@
-var dnode = require('dnode');
 var upnode = require('../../');
 
-var server = dnode(function (client, conn) {
+var server = upnode(function (client, conn) {
     this.auth = function (user, pass, cb) {
         if (user === 'moo' && pass === 'hax') {
             cb(null, {
@@ -10,6 +9,4 @@ var server = dnode(function (client, conn) {
         }
         else cb('ACCESS DENIED')
     };
-});
-server.use(upnode.ping);
-server.listen(7000);
+}).listen(7000);
