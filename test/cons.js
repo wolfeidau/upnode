@@ -7,8 +7,7 @@ test('constructor', function (t) {
     
     var up = upnode(function () {
         this.beep = 5;
-    });
-    up.connect(port);
+    }).connect(port);
     
     var server = upnode(function (remote, conn) {
         this.boop = 6;

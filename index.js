@@ -174,7 +174,10 @@ function connect (up, cons) {
         var res = cons || {};
         if (typeof cons === 'function') {
             res = cons.call(this, remote, conn);
+            if (res === undefined) res = this;
         }
+        
+        if (!res) res = {};
         if (!res.ping) res.ping = function (cb) {
             if (typeof cb === 'function') cb();
         };
