@@ -4,6 +4,8 @@ upnode
 Keep a dnode connection alive and re-establish state between reconnects
 with a transactional message queue.
 
+[![build status](https://secure.travis-ci.org/substack/upnode.png)](http://travis-ci.org/substack/upnode)
+
 examples
 ========
 
