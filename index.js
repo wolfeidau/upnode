@@ -31,7 +31,7 @@ var upnode = module.exports = function (cons) {
             });
             conn.once('disconnect', function () { conn.emit('end') });
             conn.once('close', function () { conn.emit('end') });
-            conn.once('error', function (err) { console.error(err); conn.emit('end') })
+            conn.once('error', function () { conn.emit('end') })
         });
         server.listen.apply(server, args);
         
