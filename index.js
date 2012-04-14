@@ -107,7 +107,7 @@ upnode.listen = function () {
 function connect (up, cons) {
     if (up.closed) return;
     
-    var argv = [].slice.call(arguments, 1).reduce(function (acc, arg) {
+    var argv = [].slice.call(arguments, 2).reduce(function (acc, arg) {
         if (typeof arg === 'function') acc.cb = arg
         else if (typeof arg === 'object') {
             Object.keys(arg).forEach(function (key) {
@@ -177,7 +177,10 @@ function connect (up, cons) {
         var res = cons || {};
         if (typeof cons === 'function') {
             res = cons.call(this, remote, conn);
+            if (res === undefined) res = this;
         }
+        
+        if (!res) res = {};
         if (!res.ping) res.ping = function (cb) {
             if (typeof cb === 'function') cb();
         };
