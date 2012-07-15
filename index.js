@@ -1,4 +1,6 @@
 var dnode = require('dnode');
+var parseArgs = require('dnode/lib/parse_args');
+var net = require('net');
 var EventEmitter = require('events').EventEmitter;
 
 var upnode = module.exports = function (cons) {
@@ -12,6 +14,7 @@ var upnode = module.exports = function (cons) {
     self.listen = function () {
         var args = [].slice.call(arguments);
         var server = dnode(cons);
+        /*
         server.use(upnode.ping);
         server.use(function (remote, conn) {
             var iv = setInterval(function () {
@@ -33,6 +36,7 @@ var upnode = module.exports = function (cons) {
             conn.once('close', function () { conn.emit('end') });
             conn.once('error', function () { conn.emit('end') })
         });
+        */
         server.listen.apply(server, args);
         
         if (!self.close) {
@@ -107,37 +111,21 @@ upnode.listen = function () {
 function connect (up, cons) {
     if (up.closed) return;
     
-    var argv = [].slice.call(arguments, 2).reduce(function (acc, arg) {
-        if (typeof arg === 'function') acc.cb = arg
-        else if (typeof arg === 'object') {
-            Object.keys(arg).forEach(function (key) {
-                acc.opts[key] = arg;
-            });
-            acc.args.push(arg);
-        }
-        else acc.args.push(arg)
-        
-        return acc;
-    }, { args : [], opts : {} });
+    var opts = parseArgs([].slice.call(arguments, 2));
+    var reconnect = (function (args) {
+        return function () {
+            up.emit('reconnect');
+            connect.apply(null, args);
+        };
+    })(arguments);
     
-    var args_ = arguments;
-    function reconnect () {
-        up.emit('reconnect');
-        connect.apply(null, args_);
-    }
-    
-    var cb = argv.cb || function (remote, conn) {
+    var cb = opts.block || function (remote, conn) {
         conn.emit('up', remote);
     };
     
-    var opts = {
-        ping : argv.opts.ping === undefined
-            ? 10000 : argv.opts.ping,
-        timeout : argv.opts.timeout === undefined
-            ? 5000 : argv.opts.timeout,
-        reconnect : argv.opts.reconnect === undefined
-            ? 1000 : argv.opts.reconnect,
-    };
+    if (opts.ping === undefined) opts.ping = 10000;
+    if (opts.timeout === undefined) opts.timeout = 5000;
+    if (opts.reconnect === undefined) opts.reconnect = 1000;
     
     var client = dnode(function (remote, conn) {
         up.conn = conn;
@@ -199,18 +187,18 @@ function connect (up, cons) {
     };
     var pinger = null;
     
-    client.connect.apply(client, argv.args.concat(function (remote, conn) {
-        conn.once('end', function () {
-            up.emit('down');
-        });
-        
-        up.conn = conn;
+    client.on('remote', function (remote, conn) {
         up.emit('remote', remote);
-        
+        up.stream = up.conn = stream;
         cb.call(this, remote, conn);
-    }));
+    });
+    var stream = net.connect(opts.port, opts.host);
+    stream.pipe(client).pipe(stream);
     
-    var stream = client.streams[0];
+    stream.once('end', function () {
+        up.emit('down');
+    });
+    
     stream.on('error', function () {
         if (up.conn) onend()
     });

@@ -24,7 +24,7 @@
         "test" : "tap test/*.js"
     },
     "dependencies" : {
-        "dnode" : "~0.9.10"
+        "dnode" : "~1.0.0"
     },
     "devDependencies" : {
         "tap" : "0.0.x"
