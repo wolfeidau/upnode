@@ -12,7 +12,7 @@ test('timeout', function (t) {
         t.ok(!remote);
         
         on();
-        up(1000, function (remote) {
+        up(1050, function (remote) {
             t.ok(remote);
             off();
             up.close();
