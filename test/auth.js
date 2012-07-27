@@ -7,7 +7,9 @@ test('authenticate state', function (t) {
     
     var up = upnode.connect(port, function (remote, conn) {
         remote.auth('moo', 'hax', function (err, res) {
-            if (err) console.error(err)
+            t.ok(res);
+            
+            if (err) t.fail(err)
             else conn.emit('up', res)
         });
     });
@@ -19,13 +21,11 @@ test('authenticate state', function (t) {
                 times --;
                 if (times === 5) {
                     server.end();
-                    server.close();
                     connect();
                 }
                 else if (times === 0) {
                     up.close();
                     server.end();
-                    server.close();
                     clearInterval(iv);
                     t.end();
                 }
@@ -35,7 +35,7 @@ test('authenticate state', function (t) {
     
     var server = null;
     function connect () {
-        server = dnode(function (client, conn) {
+        server = upnode(function (client, conn) {
             this.auth = function (user, pass, cb) {
                 if (user === 'moo' && pass === 'hax') {
                     cb(null, {
@@ -45,7 +45,6 @@ test('authenticate state', function (t) {
                 else cb('ACCESS DENIED')
             };
         });
-        server.use(upnode.ping);
         server.listen(port);
     }
     connect();
