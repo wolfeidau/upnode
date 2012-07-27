@@ -70,7 +70,10 @@ var upnode = module.exports = function (cons) {
             self._servers = [];
             self.close = function () {
                 self._closed = true;
-                self._servers.forEach(function (s) { s.close() });
+                self._servers.forEach(function (s) {
+                    if (!s._closed) s.close();
+                    s._closed = true;
+                });
             };
         }
         self._servers.push(server);
