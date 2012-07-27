@@ -44,12 +44,12 @@ var upnode = module.exports = function (cons) {
                 var onend = function () {
                     stream.destroy();
                     clearInterval(iv);
-                    var ix = server._connections.indexOf(d);
-                    if (ix >= 0) server._connections.splice(ix, 1);
+                    var ix = server._ds.indexOf(d);
+                    if (ix >= 0) server._ds.splice(ix, 1);
                 };
                 
-                if (!server._connections) server._connections = [];
-                server._connections.push(d);
+                if (!server._ds) server._ds = [];
+                server._ds.push(d);
                 
                 stream.once('end', onend);
                 stream.once('disconnect', onend);
@@ -80,7 +80,7 @@ var upnode = module.exports = function (cons) {
         
         if (!server.end) server.end = function () {
             (self._servers || []).forEach(function (server) {
-                (server._connections || []).forEach(function (c) {
+                (server._ds || []).forEach(function (c) {
                     c.destroy();
                 });
             });
