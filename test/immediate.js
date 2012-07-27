@@ -6,13 +6,11 @@ test('immediate connection', function (t) {
     t.plan(1);
     
     var port = Math.floor(Math.random() * 5e4 + 1e4);
-    var server = dnode({
+    var server = upnode({
         beep : function (cb) { cb('boop') }
     });
-    server.use(upnode.ping);
-    server.listen(port);
     
-    server.on('ready', function () {
+    server.listen(port, function () {
         var up = upnode.connect(port);
         up(function (remote, conn) {
             remote.beep(function (s) {
