@@ -60,14 +60,14 @@ test('simple', function (t) {
     function on () {
         server = dnode(function (client, conn) {
             this.time = function (cb) { cb(Date.now()) };
+            upnode.ping.call(this, this, conn);
         });
-        //server.use(upnode.ping);
         server.listen(port);
     }
     
     function off () {
         server.end();
-        server.close();
+        console.dir(server);
     }
 });
 
@@ -99,8 +99,7 @@ test('does not leak on.close listeners', function(t) {
     var server;
     function on () {
         setTimeout(function() {
-            server = dnode();
-            server.use(upnode.ping);
+            server = upnode();
             server.listen(port);
         }, 100)
     }
@@ -132,6 +131,7 @@ test('add callbacks in connection handler', function (t) {
     
     t.on('end', function () {
         up.close();
+        server.end();
         server.close();
     });
 });

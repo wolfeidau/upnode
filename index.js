@@ -14,9 +14,10 @@ var upnode = module.exports = function (cons) {
     self.listen = function () {
         var args = [].slice.call(arguments);
         var server = dnode(cons);
-        /*
-        server.use(upnode.ping);
-        server.use(function (remote, conn) {
+        server.on('local', function (remote, conn) {
+            upnode.ping.call(remote, remote, conn);
+        });
+        server.on('local', function (remote, conn) {
             var iv = setInterval(function () {
                 if (typeof remote.ping === 'function') {
                     var to = setTimeout(function () {
@@ -36,7 +37,6 @@ var upnode = module.exports = function (cons) {
             conn.once('close', function () { conn.emit('end') });
             conn.once('error', function () { conn.emit('end') })
         });
-        */
         server.listen.apply(server, args);
         
         if (!self.close) {
@@ -128,40 +128,6 @@ function connect (up, cons) {
     if (opts.reconnect === undefined) opts.reconnect = 1000;
     
     var client = dnode(function (remote, conn) {
-        up.conn = conn;
-        
-        conn.once('up', function (r) {
-            up.remote = r;
-            up.queue.forEach(function (fn) { fn(up.remote, up.conn) });
-            up.queue = [];
-            up.emit('up', r);
-        });
-        
-        conn.on('ready', function () {
-            if (opts.ping && typeof remote.ping !== 'function') {
-                up.emit('error', new Error(
-                    'Remote does not implement ping. '
-                    + 'Add server.use(require(\'upnode\').ping) to the remote.'
-                ));
-            }
-            else if (opts.ping) {
-                pinger = setInterval(function () {
-                    var t0 = Date.now();
-                    var to = opts.timeout && setTimeout(function () {
-                        clearInterval(pinger);
-                        conn.end();
-                        stream.destroy();
-                    }, opts.timeout);
-                    
-                    remote.ping(function () {
-                        var elapsed = Date.now() - t0;
-                        if (to) clearTimeout(to);
-                        up.emit('ping', elapsed);
-                    });
-                }, opts.ping);
-            }
-        });
-        
         var res = cons || {};
         if (typeof cons === 'function') {
             res = cons.call(this, remote, conn);
@@ -174,6 +140,39 @@ function connect (up, cons) {
         };
         
         return res;
+    });
+    
+    up.conn = client;
+    client.once('up', function (r) {
+        up.remote = r;
+        up.queue.forEach(function (fn) { fn(up.remote, up.conn) });
+        up.queue = [];
+        up.emit('up', r);
+    });
+    
+    client.on('remote', function (remote) {
+        if (opts.ping && typeof remote.ping !== 'function') {
+            up.emit('error', new Error(
+                'Remote does not implement ping. '
+                + 'Add server.use(require(\'upnode\').ping) to the remote.'
+            ));
+        }
+        else if (opts.ping) {
+            pinger = setInterval(function () {
+                var t0 = Date.now();
+                var to = opts.timeout && setTimeout(function () {
+                    clearInterval(pinger);
+                    conn.end();
+                    stream.destroy();
+                }, opts.timeout);
+                
+                remote.ping(function () {
+                    var elapsed = Date.now() - t0;
+                    if (to) clearTimeout(to);
+                    up.emit('ping', elapsed);
+                });
+            }, opts.ping);
+        }
     });
     
     var alive = true;
