@@ -1,6 +1,7 @@
 var upnode = require('../');
 var dnode = require('dnode');
 var test = require('tap').test;
+var net = require('net');
 
 test('simple', function (t) {
     t.plan(8);
@@ -56,18 +57,21 @@ test('simple', function (t) {
         t.end();
     }
     
-    var server;
+    var server, ds;
     function on () {
-        server = dnode(function (client, conn) {
-            this.time = function (cb) { cb(Date.now()) };
-            upnode.ping.call(this, this, conn);
+        server = net.createServer(function (stream) {
+            ds = dnode(function (client, conn) {
+                this.time = function (cb) { cb(Date.now()) };
+                upnode.ping.call(this, this, conn);
+            });
+            ds.pipe(stream).pipe(ds);
         });
         server.listen(port);
     }
     
     function off () {
-        server.end();
-        console.dir(server);
+        ds.end();
+        server.close();
     }
 });
 
@@ -92,10 +96,12 @@ test('does not leak on.close listeners', function(t) {
         if (iterations === 0) return done();
         on();
     })
+    
     function done () {
         up.close();
+        server.end();
     }
-
+    
     var server;
     function on () {
         setTimeout(function() {
@@ -106,8 +112,8 @@ test('does not leak on.close listeners', function(t) {
 
     function off () {
         setTimeout(function() {
-            server.end();
             server.close();
+            server.end();
         }, 100)
     }
 });
@@ -118,20 +124,19 @@ test('add callbacks in connection handler', function (t) {
     
     var up = upnode(function () {
         this.beep = 5;
-    }).connect(port, function(remote, conn) {
+    }).connect(port);
+    
+    up.on('remote', function (remote, conn) {
         up(function(remote_, conn_) {
             t.equal(remote, remote_);
             t.equal(conn, conn_);
+            
+            up.close();
+            server.close();
         })
         conn.emit('up', remote);
     });
     
     var server = upnode();
     server.listen(port);
-    
-    t.on('end', function () {
-        up.close();
-        server.end();
-        server.close();
-    });
 });

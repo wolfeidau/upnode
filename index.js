@@ -8,45 +8,93 @@ var upnode = module.exports = function (cons) {
     self.connect = function () {
         var args = [].slice.call(arguments);
         var up = createConnectionUp();
+        if (!self._ups) self._ups = [];
+        self._ups.push(up);
         return connect.apply(null, [ up, cons ].concat(args));
     };
     
     self.listen = function () {
-        var args = [].slice.call(arguments);
-        var server = dnode(cons);
-        server.on('local', function (remote, conn) {
-            upnode.ping.call(remote, remote, conn);
-        });
-        server.on('local', function (remote, conn) {
-            var iv = setInterval(function () {
-                if (typeof remote.ping === 'function') {
-                    var to = setTimeout(function () {
-                        conn.end();
-                    }, 10 * 10000);
-                    
-                    remote.ping(function () {
-                        clearTimeout(to);
-                    });
-                }
-            }, 10 * 1000);
+        var args = parseArgs(arguments);
+        
+        var server = net.createServer(function (stream) {
+            var d = dnode(cons);
+            d.pipe(stream).pipe(d);
             
-            conn.once('end', function () {
-                clearInterval(iv);
+            d.on('local', function (local) {
+                if (local.ping === undefined) {
+                    local.ping = function (cb) {
+                        if (typeof cb === 'function') cb();
+                    };
+                }
             });
-            conn.once('disconnect', function () { conn.emit('end') });
-            conn.once('close', function () { conn.emit('end') });
-            conn.once('error', function () { conn.emit('end') })
+            
+            d.on('remote', function (remote) {
+                var iv = setInterval(function () {
+                    if (typeof remote.ping === 'function') {
+                        var to = setTimeout(function () {
+                            d.end();
+                        }, 10 * 10000);
+                        
+                        remote.ping(function () {
+                            clearTimeout(to);
+                        });
+                    }
+                }, 10 * 1000);
+                
+                var onend = function () {
+                    stream.destroy();
+                    clearInterval(iv);
+                    var ix = server._connections.indexOf(d);
+                    if (ix >= 0) server._connections.splice(ix, 1);
+                };
+                
+                if (!server._connections) server._connections = [];
+                server._connections.push(d);
+                
+                stream.once('end', onend);
+                stream.once('disconnect', onend);
+                stream.once('close', onend);
+                stream.once('error', onend);
+            });
         });
-        server.listen.apply(server, args);
+        
+        if (args.port) {
+            server.listen(args.port, args.host, args.block);
+        }
+        else if (args.path) {
+            server.listen(args.path, args.block);
+        }
+        else throw new Error("no port or path given to .listen()");
         
         if (!self.close) {
             self._servers = [];
             self.close = function () {
+                self._closed = true;
                 self._servers.forEach(function (s) { s.close() });
             };
         }
         self._servers.push(server);
+        
+        if (!server.end) server.end = function () {
+            (self._servers || []).forEach(function (server) {
+                (server._connections || []).forEach(function (c) {
+                    c.destroy();
+                });
+            });
+        };
+        
         return server;
+    };
+    
+    self.end = function () {
+        if (!self._closed) self.close();
+        
+        (self._servers || []).forEach(function (server) {
+            server.end();
+        });
+        (self._ups || []).forEach(function (up) {
+            up.end();
+        });
     };
     
     return self;
@@ -142,7 +190,6 @@ function connect (up, cons) {
         return res;
     });
     
-    up.conn = client;
     client.once('up', function (r) {
         up.remote = r;
         up.queue.forEach(function (fn) { fn(up.remote, up.conn) });
@@ -151,6 +198,7 @@ function connect (up, cons) {
     });
     
     client.on('remote', function (remote) {
+        up.conn = client;
         if (opts.ping && typeof remote.ping !== 'function') {
             up.emit('error', new Error(
                 'Remote does not implement ping. '
@@ -186,10 +234,10 @@ function connect (up, cons) {
     };
     var pinger = null;
     
-    client.on('remote', function (remote, conn) {
-        up.emit('remote', remote);
-        up.stream = up.conn = stream;
-        cb.call(this, remote, conn);
+    client.on('remote', function (remote) {
+        up.emit('remote', remote, client);
+        up.stream = stream;
+        cb.call(this, remote, client);
     });
     var stream = net.connect(opts.port, opts.host);
     stream.pipe(client).pipe(stream);
