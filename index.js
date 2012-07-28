@@ -18,6 +18,7 @@ var upnode = module.exports = function (cons) {
         
         var server = net.createServer(function (stream) {
             var d = dnode(cons);
+            d.stream = stream;
             d.pipe(stream).pipe(d);
             
             d.on('local', function (local) {
@@ -225,6 +226,7 @@ function connect (up, cons) {
         var isUp = Boolean(up.conn);
         up.conn = null;
         up.remote = null;
+        up.stream = null;
         stream.destroy();
         
         if (alive && !up.closed) setTimeout(reconnect, opts.reconnect);
@@ -240,6 +242,7 @@ function connect (up, cons) {
         cb.call(this, remote, client);
     });
     var stream = net.connect(opts.port, opts.host);
+    client.stream = stream;
     stream.pipe(client).pipe(stream);
     
     stream.on('error', onend);
