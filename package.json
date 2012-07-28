@@ -24,10 +24,10 @@
         "test" : "tap test/*.js"
     },
     "dependencies" : {
-        "dnode" : "~1.0.0"
+        "dnode" : "~1.0.1"
     },
     "devDependencies" : {
-        "tap" : "0.0.x"
+        "tap" : "~0.2.6"
     },
     "engines" : {
         "node" : ">=0.4.0"
