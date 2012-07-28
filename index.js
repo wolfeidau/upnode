@@ -145,12 +145,6 @@ function createConnectionUp () {
     return up;
 }
 
-upnode.ping = function (client, conn) {
-    if (!this.ping) this.ping = function (cb) {
-        if (typeof cb === 'function') cb()
-    };
-};
-
 upnode.connect = function () {
     return upnode({}).connect.apply(null, arguments);
 };

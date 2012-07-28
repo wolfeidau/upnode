@@ -62,7 +62,7 @@ test('simple', function (t) {
         server = net.createServer(function (stream) {
             ds = dnode(function (client, conn) {
                 this.time = function (cb) { cb(Date.now()) };
-                upnode.ping.call(this, this, conn);
+                this.ping = function (cb) { cb() };
             });
             ds.pipe(stream).pipe(ds);
         });
