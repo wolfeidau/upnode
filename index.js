@@ -228,12 +228,15 @@ function connect (up, cons) {
     
     var alive = true;
     var onend = function () {
+        var isUp = Boolean(up.conn);
         up.conn = null;
+        up.remote = null;
         stream.destroy();
         
         if (alive && !up.closed) setTimeout(reconnect, opts.reconnect);
         if (pinger) clearInterval(pinger);
         alive = false;
+        if (isUp) up.emit('down');
     };
     var pinger = null;
     
@@ -245,19 +248,11 @@ function connect (up, cons) {
     var stream = net.connect(opts.port, opts.host);
     stream.pipe(client).pipe(stream);
     
-    stream.once('end', function () {
-        up.emit('down');
-    });
-    
-    stream.on('error', function () {
-        if (up.conn) onend()
-    });
+    stream.on('error', onend);
     stream.on('end', onend);
     stream.on('close', onend);
     
-    client.on('error', function () {
-        if (up.conn) onend()
-    });
+    client.on('error', onend);
     
     return up;
 }
