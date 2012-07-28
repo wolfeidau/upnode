@@ -12,9 +12,6 @@ examples
 simple service interruption
 ---------------------------
 
-Write a dnode server as usual but enable the upnode ping middleware with
-`server.use(upnode.ping)`.
-
 server.js:
 
 ``` js
@@ -245,15 +242,9 @@ Close the connection and don't attempt to reconnect.
 upnode(cons).listen(...)
 ------------------------
 
-Create and return a new dnode server with ping middleware loaded that pings the
-connected clients to ensure connectivity to all connected nodes.
-
-upnode.ping()
--------------
-
-Middleware that sets `this.ping` to `function (cb) { cb() }`.
-
-In your dnode server, do `server.use(upnode.ping)`.
+Create and return a new dnode server with ping enabled.
+If periodic pings aren't going through the connection will be dropped and
+re-established automatically.
 
 install
 =======
