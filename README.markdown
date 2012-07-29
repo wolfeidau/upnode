@@ -152,6 +152,66 @@ You could do any other sort of stateful operation here besides authentication.
 Just emit the object you want to expose to `up()` through
 `conn.emit('up', obj)`.
 
+ssl stream example
+------------------
+
+This is very similar to the first example, except using tls streams. You can use
+any kind of full-duplex stream here, not just ssl.
+
+server.js:
+
+``` js
+var upnode = require('upnode');
+var fs = require('fs');
+var tls = require('tls');
+
+var opts = {
+    key : fs.readFileSync(__dirname + '/keys/key.pem'),
+    cert : fs.readFileSync(__dirname + '/keys/cert.pem'),
+};
+var server = tls.createServer(opts, function (stream) {
+    var up = upnode(function (client, conn) {
+        this.time = function (cb) { cb(new Date().toString()) };
+    });
+    up.pipe(stream).pipe(up);
+});
+server.listen(7000);
+```
+
+client.js:
+
+``` js
+var upnode = require('upnode');
+var tls = require('tls');
+var up = upnode.connect({
+    createStream : tls.connect.bind(null, 7000)
+});
+
+setInterval(function () {
+    up(function (remote) {
+        remote.time(function (t) {
+            console.log('time = ' + t);
+        });
+    });
+}, 1000);
+```
+
+It behaves just like the first example when run on the command line, except that
+our connections go over ssl now:
+
+```
+$ node client.js & sleep 5; node server.js
+[1] 9178
+time = Sun Jul 29 2012 02:31:00 GMT-0700 (PDT)
+time = Sun Jul 29 2012 02:31:00 GMT-0700 (PDT)
+time = Sun Jul 29 2012 02:31:00 GMT-0700 (PDT)
+time = Sun Jul 29 2012 02:31:00 GMT-0700 (PDT)
+time = Sun Jul 29 2012 02:31:00 GMT-0700 (PDT)
+time = Sun Jul 29 2012 02:31:01 GMT-0700 (PDT)
+time = Sun Jul 29 2012 02:31:02 GMT-0700 (PDT)
+time = Sun Jul 29 2012 02:31:03 GMT-0700 (PDT)
+```
+
 methods
 =======
 
