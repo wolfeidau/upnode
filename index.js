@@ -75,18 +75,18 @@ var upnode = module.exports = function (cons) {
             });
         };
         
-        return server;
-    };
-    
-    self.end = function () {
-        if (!self._closed) self.close();
+        self.end = function () {
+            if (!self._closed) self.close();
+            
+            (self._servers || []).forEach(function (server) {
+                server.end();
+            });
+            (self._ups || []).forEach(function (up) {
+                up.end();
+            });
+        };
         
-        (self._servers || []).forEach(function (server) {
-            server.end();
-        });
-        (self._ups || []).forEach(function (up) {
-            up.end();
-        });
+        return server;
     };
     
     return self;
