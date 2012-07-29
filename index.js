@@ -15,16 +15,13 @@ var upnode = module.exports = function (cons) {
         return connect.apply(null, [ up, cons ].concat(args));
     };
     
-    self.pipe = function (target) {
-        var d = serverHandle(cons);
-        self._serverHandle = d;
-        return d.pipe(target);
-    };
-    
     self.writable = true;
     self.readable = true;
     
-    [ 'write', 'end', 'destroy' ].forEach(function (name) {
+    var names = Object.keys(EventEmitter.prototype).concat(
+        'pipe', 'write', 'end', 'destroy'
+    );
+    names.forEach(function (name) {
         self[name] = function (buf) {
             var h = self._serverHandle;
             if (!h) h = self._serverHandle = serverHandle(cons);
