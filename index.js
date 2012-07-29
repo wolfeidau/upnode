@@ -15,11 +15,40 @@ var upnode = module.exports = function (cons) {
         return connect.apply(null, [ up, cons ].concat(args));
     };
     
+    self.pipe = function (target) {
+        var d = serverHandle(cons);
+        self._serverHandle = d;
+        return d.pipe(target);
+    };
+    
+    self.writable = true;
+    self.readable = true;
+    
+    [ 'write', 'end', 'destroy' ].forEach(function (name) {
+        self[name] = function (buf) {
+            var h = self._serverHandle;
+            if (!h) h = self._serverHandle = serverHandle(cons);
+            return h[name].apply(h, arguments);
+        };
+    });
+    
     self.listen = function () {
         var args = parseArgs(arguments);
         
         var server = net.createServer();
-        server.on('connection', serverHandle(server, cons));
+        server._ds = [];
+        
+        server.on('connection', function (stream) {
+            var d = serverHandle(cons);
+            d.stream = stream;
+            d.pipe(stream).pipe(d);
+            
+            server._ds.push(d);
+            d.once('done', function () {
+                var ix = server._ds.indexOf(d);
+                if (ix >= 0) server._ds.splice(ix, 1);
+            });
+        });
         
         if (args.port) {
             server.listen(args.port, args.host, args.block);
