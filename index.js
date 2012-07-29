@@ -3,6 +3,8 @@ var parseArgs = require('dnode/lib/parse_args');
 var net = require('net');
 var EventEmitter = require('events').EventEmitter;
 
+var serverHandle = require('./lib/server_handle');
+
 var upnode = module.exports = function (cons) {
     var self = {};
     self.connect = function () {
@@ -16,48 +18,8 @@ var upnode = module.exports = function (cons) {
     self.listen = function () {
         var args = parseArgs(arguments);
         
-        var server = net.createServer(function (stream) {
-            var d = dnode(cons);
-            d.stream = stream;
-            d.pipe(stream).pipe(d);
-            
-            d.on('local', function (local) {
-                if (local.ping === undefined) {
-                    local.ping = function (cb) {
-                        if (typeof cb === 'function') cb();
-                    };
-                }
-            });
-            
-            d.on('remote', function (remote) {
-                var iv = setInterval(function () {
-                    if (typeof remote.ping === 'function') {
-                        var to = setTimeout(function () {
-                            d.end();
-                        }, 10 * 10000);
-                        
-                        remote.ping(function () {
-                            clearTimeout(to);
-                        });
-                    }
-                }, 10 * 1000);
-                
-                var onend = function () {
-                    stream.destroy();
-                    clearInterval(iv);
-                    var ix = server._ds.indexOf(d);
-                    if (ix >= 0) server._ds.splice(ix, 1);
-                };
-                
-                if (!server._ds) server._ds = [];
-                server._ds.push(d);
-                
-                stream.once('end', onend);
-                stream.once('disconnect', onend);
-                stream.once('close', onend);
-                stream.once('error', onend);
-            });
-        });
+        var server = net.createServer();
+        server.on('connection', serverHandle(server, cons));
         
         if (args.port) {
             server.listen(args.port, args.host, args.block);
@@ -172,6 +134,11 @@ function connect (up, cons) {
     if (opts.ping === undefined) opts.ping = 10000;
     if (opts.timeout === undefined) opts.timeout = 5000;
     if (opts.reconnect === undefined) opts.reconnect = 1000;
+    if (opts.createStream === undefined) {
+        opts.createStream = function () {
+            return net.connect(opts.port, opts.host);
+        }
+    }
     
     var client = dnode(function (remote, conn) {
         var res = cons || {};
@@ -241,7 +208,7 @@ function connect (up, cons) {
         up.stream = stream;
         cb.call(this, remote, client);
     });
-    var stream = net.connect(opts.port, opts.host);
+    var stream = opts.createStream();
     client.stream = stream;
     stream.pipe(client).pipe(stream);
     
