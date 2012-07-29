@@ -1,16 +1,13 @@
-upnode
-======
+# upnode
 
 Keep a dnode connection alive and re-establish state between reconnects
 with a transactional message queue.
 
 [![build status](https://secure.travis-ci.org/substack/upnode.png)](http://travis-ci.org/substack/upnode)
 
-examples
-========
+# examples
 
-simple service interruption
----------------------------
+## simple service interruption
 
 server.js:
 
@@ -83,8 +80,7 @@ time = Fri Dec 16 2011 23:50:21 GMT-0800 (PST)
 time = Fri Dec 16 2011 23:50:22 GMT-0800 (PST)
 ```
 
-authenticated interruption
---------------------------
+## authenticated interruption
 
 Oftentimes you'll want to re-establish state between reconnection attempts.
 
@@ -152,8 +148,7 @@ You could do any other sort of stateful operation here besides authentication.
 Just emit the object you want to expose to `up()` through
 `conn.emit('up', obj)`.
 
-ssl stream example
-------------------
+## ssl stream example
 
 This is very similar to the first example, except using tls streams. You can use
 any kind of full-duplex stream here, not just ssl.
@@ -212,21 +207,47 @@ time = Sun Jul 29 2012 02:31:02 GMT-0700 (PDT)
 time = Sun Jul 29 2012 02:31:03 GMT-0700 (PDT)
 ```
 
-methods
-=======
+# methods
 
+``` js
 var upnode = require('upnode')
+```
 
-var up = upnode(constructor={}).connect(...)
---------------------------------------------
+## var up = upnode(cons)
 
-Establish a new dnode-style connection with the dnode function or object
-`constructor` and the connection parameters which may contain host strings, port
-numbers, option objects, and a connection callback in any order.
+Create an upnode object `up` from the dnode constructor `cons`.
+
+`up` is a pipe-able object, which is a useful property when writing custom
+servers like in the ssl example.
+
+In both server and client mode each side will send periodic heartbeats to the
+other side and sever the connection if data isn't getting through. Clients
+created with `up.connect()` will attempt to reconnect continuously.
+
+# up.listen(...)
+
+Listen on a port with `net.createServer()`.
+
+To use something other than `net.createServer()`, exploit how `up` is a
+full-duplex stream that you can pipe data into and out of.
+
+Returns the net server object.
+
+## var cup = up.connect(...)
+
+Establish an upnode connection with `net.connect()`.
+
+Pass in dnode-style arguments where port, host, path, and options objects are
+inferred by the types of the arguments.
 
 Returns a transaction function `up()` for the connection.
 
-The `up` object emits `"up"` when the link is established, `"down" when the link
+You can use other streams besides `net.connect()` streams by passing in a
+`{ createStream : createStream }` object where `createStream()` is a function
+that returns a new stream object. The connection will call `createStream()` when
+the heartbeat fails or the previous stream ended or had errors.
+
+The `cup` object emits `"up"` when the link is established, `"down" when the link
 is severed, and `"reconnect"` for each reconnection attempt.
 
 If you give `.connect()` a callback, you *must* emit an `'up', remote` event on
@@ -240,6 +261,8 @@ function (remote, conn) {
     conn.emit('up', remote);
 }
 ```
+
+The `conn` is just the dnode object.
 
 The callback must emit an `'up'` event so that state can be rebuilt between
 connection interruptions. A great use for this behavior is authentication where
@@ -269,15 +292,14 @@ option-object arguments are respected:
     reconnect. Default 5000.
 * reconnect - Time in milliseconds to wait between reconnection attempts.
     Default 1000.
+* createStream - Connection function to use instead of `net.connect()`.
 
-var up = upnode.connect(...)
-----------------------------
+## var cup = upnode.connect(...)
 
 Shortcut for `upnode({}).connect(...)` like how `dnode.connect(...)` is a
 shortcut for `dnode({}).connect(...)`.
 
-up(timeout=0, cb)
------------------
+## cup(timeout=0, cb)
 
 Create a new transaction from the callback `cb`.
 
@@ -294,26 +316,18 @@ up(5000, function (remote) {
 })
 ```
 
-up.close()
-----------
+## cup.close()
 
 Close the connection and don't attempt to reconnect.
 
-upnode(cons).listen(...)
-------------------------
-
-Create and return a new dnode server with ping enabled.
-If periodic pings aren't going through the connection will be dropped and
-re-established automatically.
-
-install
-=======
+# install
 
 With [npm](http://npmjs.org) do:
 
-    npm install upnode
+```
+npm install upnode
+```
 
-license
-=======
+# license
 
-MIT/X11
+MIT
