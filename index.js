@@ -201,7 +201,7 @@ function connect (up, cons) {
                 var t0 = Date.now();
                 var to = opts.timeout && setTimeout(function () {
                     clearInterval(pinger);
-                    up.conn.end();
+                    if (up.conn) up.conn.end();
                     stream.destroy();
                 }, opts.timeout);
                 
